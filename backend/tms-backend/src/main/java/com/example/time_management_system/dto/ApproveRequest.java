@@ -9,11 +9,10 @@ public class ApproveRequest {
 
     /**
      * Must be APPROVED or REJECTED; PENDING is not a valid action.
+     * The approver identity is resolved from the JWT token, not this payload.
      */
     @NotNull
     private Timesheet.Status status;
 
     private String remarks;
-
-    private Long approverId;
 }

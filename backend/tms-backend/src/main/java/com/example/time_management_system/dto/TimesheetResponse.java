@@ -15,6 +15,7 @@ public class TimesheetResponse {
     private LocalDate date;
     private Integer hours;
     private Timesheet.Status status;
+    private Long approvedById;
     private String approvedByName;
     private String remarks;
 }
