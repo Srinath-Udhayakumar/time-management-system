@@ -11,12 +11,14 @@ import com.example.time_management_system.repository.TimesheetRepository;
 import com.example.time_management_system.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class TimesheetService {
 
     private final TimesheetRepository timesheetRepository;
@@ -41,6 +43,7 @@ public class TimesheetService {
         return toResponse(timesheetRepository.save(timesheet));
     }
 
+    @Transactional(readOnly = true)
     public List<TimesheetResponse> getByUser(Long userId) {
         return timesheetRepository.findByUserId(userId)
                 .stream()
@@ -48,6 +51,7 @@ public class TimesheetService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<TimesheetResponse> getPending() {
         return timesheetRepository.findByStatus(Timesheet.Status.PENDING)
                 .stream()
