@@ -11,12 +11,11 @@ import java.time.LocalDate;
 public class TimesheetRequest {
 
     @NotNull
-    private Long userId;
-
-    @NotNull
     private Long projectId;
 
-    @NotNull
+    /**
+     * Optional – if omitted the backend auto-uses today's date (LocalDate.now()).
+     */
     private LocalDate date;
 
     @NotNull

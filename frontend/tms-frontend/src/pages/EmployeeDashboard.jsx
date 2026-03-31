@@ -10,65 +10,129 @@ const STATUS_COLOR = {
   REJECTED: '#ef4444',
 };
 
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+function formatDisplayDate(date) {
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
+
+function toISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Returns Mon–Fri Date objects for the week containing `today`. */
+function getCurrentWeekDays(today) {
+  const day = today.getDay(); // 0=Sun … 6=Sat
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
 export default function EmployeeDashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
+  const today = new Date();
+  const todayISO = toISODate(today);
+  const weekDays = getCurrentWeekDays(today);
+
+  // ------ Submission state ------
+  const [projectId, setProjectId] = useState('');
+  const [weekHours, setWeekHours] = useState({}); // { dateISO: hourString }
+  const [daySubmitting, setDaySubmitting] = useState({});
+  const [dayMessages, setDayMessages] = useState({}); // { dateISO: {error, success} }
+
+  // ------ History / filters ------
   const [timesheets, setTimesheets] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [listError, setListError] = useState('');
+  const [filterMonth, setFilterMonth] = useState(today.getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(today.getFullYear());
+  const [filterStatus, setFilterStatus] = useState('');
 
-  const [form, setForm] = useState({
-    projectId: '',
-    date: '',
-    hours: '',
-  });
-  const [submitError, setSubmitError] = useState('');
-  const [submitSuccess, setSubmitSuccess] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const fetchTimesheets = useCallback(async () => {
+  const fetchTimesheets = useCallback(async (params) => {
     setLoadingList(true);
     setListError('');
     try {
-      const { data } = await getMyTimesheets(user.userId);
+      const { data } = await getMyTimesheets(params);
       setTimesheets(data);
     } catch {
       setListError('Failed to load timesheets.');
     } finally {
       setLoadingList(false);
     }
-  }, [user.userId]);
+  }, []);
 
   useEffect(() => {
-    fetchTimesheets();
-  }, [fetchTimesheets]);
+    fetchTimesheets({ month: filterMonth, year: filterYear });
+  }, [fetchTimesheets, filterMonth, filterYear]);
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
+  // Map of date → timesheet for the current week
+  const submittedDates = new Set(timesheets.map((ts) => ts.date));
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSubmitError('');
-    setSubmitSuccess('');
-    setSubmitting(true);
+  async function handleDaySubmit(dateISO) {
+    const hours = Number(weekHours[dateISO]);
+    if (!hours || hours < 1 || hours > 24) {
+      setDayMessages((prev) => ({
+        ...prev,
+        [dateISO]: { error: 'Enter hours between 1 and 24.', success: '' },
+      }));
+      return;
+    }
+    if (!projectId) {
+      setDayMessages((prev) => ({
+        ...prev,
+        [dateISO]: { error: 'Select a Project ID first.', success: '' },
+      }));
+      return;
+    }
+
+    setDaySubmitting((prev) => ({ ...prev, [dateISO]: true }));
+    setDayMessages((prev) => ({ ...prev, [dateISO]: { error: '', success: '' } }));
     try {
       await submitTimesheet({
-        userId: user.userId,
-        projectId: Number(form.projectId),
-        date: form.date,
-        hours: Number(form.hours),
+        projectId: Number(projectId),
+        date: dateISO,
+        hours,
       });
-      setSubmitSuccess('Timesheet submitted successfully!');
-      setForm({ projectId: '', date: '', hours: '' });
-      fetchTimesheets();
+      setDayMessages((prev) => ({
+        ...prev,
+        [dateISO]: { error: '', success: 'Submitted!' },
+      }));
+      setWeekHours((prev) => ({ ...prev, [dateISO]: '' }));
+      fetchTimesheets({ month: filterMonth, year: filterYear });
     } catch (err) {
-      setSubmitError(err.response?.data?.message || 'Failed to submit timesheet.');
+      setDayMessages((prev) => ({
+        ...prev,
+        [dateISO]: {
+          error: err.response?.data?.message || 'Submission failed.',
+          success: '',
+        },
+      }));
     } finally {
-      setSubmitting(false);
+      setDaySubmitting((prev) => ({ ...prev, [dateISO]: false }));
     }
+  }
+
+  function applyFilters(e) {
+    e.preventDefault();
+    const params = { month: filterMonth, year: filterYear };
+    if (filterStatus) params.status = filterStatus;
+    fetchTimesheets(params);
   }
 
   function handleLogout() {
@@ -90,63 +154,137 @@ export default function EmployeeDashboard() {
       </header>
 
       <main className={styles.main}>
-        {/* Submit Timesheet */}
+
+        {/* Today + Weekly Entry */}
         <section className={styles.card}>
-          <h2 className={styles.sectionTitle}>Submit Timesheet</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>Submit Timesheet</h2>
+            <span className={styles.todayLabel}>Today: {formatDisplayDate(today)}</span>
+          </div>
 
-          {submitError && <p className={styles.error}>{submitError}</p>}
-          {submitSuccess && <p className={styles.success}>{submitSuccess}</p>}
+          <div className={styles.projectRow}>
+            <label className={styles.label}>
+              Project ID
+              <input
+                className={styles.input}
+                type="number"
+                min="1"
+                placeholder="e.g. 1"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+              />
+            </label>
+          </div>
 
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <div className={styles.formRow}>
-              <label className={styles.label}>
-                Project ID
-                <input
-                  className={styles.input}
-                  type="number"
-                  name="projectId"
-                  value={form.projectId}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  placeholder="e.g. 1"
-                />
-              </label>
-              <label className={styles.label}>
-                Date
-                <input
-                  className={styles.input}
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  onChange={handleChange}
-                  required
-                />
-              </label>
-              <label className={styles.label}>
-                Hours
-                <input
-                  className={styles.input}
-                  type="number"
-                  name="hours"
-                  value={form.hours}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  max="24"
-                  placeholder="1–24"
-                />
-              </label>
-            </div>
-            <button className={styles.btn} type="submit" disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit'}
-            </button>
-          </form>
+          <div className={styles.weekGrid}>
+            {weekDays.map((day, i) => {
+              const iso = toISODate(day);
+              const isFuture = iso > todayISO;
+              const isSubmitted = submittedDates.has(iso);
+              const submittedTs = timesheets.find((ts) => ts.date === iso);
+              const msg = dayMessages[iso] || {};
+
+              return (
+                <div
+                  key={iso}
+                  className={`${styles.dayCell} ${isFuture ? styles.dayCellDisabled : ''} ${isSubmitted ? styles.dayCellSubmitted : ''}`}
+                >
+                  <div className={styles.dayName}>{DAY_NAMES[i]}</div>
+                  <div className={styles.dayDate}>
+                    {day.getDate()}/{day.getMonth() + 1}
+                  </div>
+
+                  {isSubmitted ? (
+                    <div className={styles.daySubmittedInfo}>
+                      <div className={styles.dayHours}>{submittedTs.hours}h</div>
+                      <span
+                        className={styles.statusBadge}
+                        style={{ background: STATUS_COLOR[submittedTs.status] }}
+                      >
+                        {submittedTs.status}
+                      </span>
+                    </div>
+                  ) : isFuture ? (
+                    <div className={styles.dayCellDisabledText}>—</div>
+                  ) : (
+                    <div className={styles.dayInputGroup}>
+                      <input
+                        className={styles.dayInput}
+                        type="number"
+                        min="1"
+                        max="24"
+                        placeholder="hrs"
+                        value={weekHours[iso] || ''}
+                        onChange={(e) =>
+                          setWeekHours((prev) => ({ ...prev, [iso]: e.target.value }))
+                        }
+                        disabled={daySubmitting[iso]}
+                      />
+                      <button
+                        className={styles.daySubmitBtn}
+                        onClick={() => handleDaySubmit(iso)}
+                        disabled={daySubmitting[iso]}
+                      >
+                        {daySubmitting[iso] ? '…' : '✓'}
+                      </button>
+                    </div>
+                  )}
+
+                  {msg.error && <p className={styles.dayCellError}>{msg.error}</p>}
+                  {msg.success && <p className={styles.dayCellSuccess}>{msg.success}</p>}
+                </div>
+              );
+            })}
+          </div>
         </section>
 
-        {/* My Timesheets */}
+        {/* History with Filters */}
         <section className={styles.card}>
-          <h2 className={styles.sectionTitle}>My Timesheets</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>My Timesheets</h2>
+          </div>
+
+          <form onSubmit={applyFilters} className={styles.filterBar}>
+            <label className={styles.filterLabel}>
+              Month
+              <select
+                className={styles.filterInput}
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(Number(e.target.value))}
+              >
+                {MONTH_NAMES.map((m, i) => (
+                  <option key={i + 1} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.filterLabel}>
+              Year
+              <input
+                className={styles.filterInput}
+                type="number"
+                value={filterYear}
+                min="2020"
+                max="2099"
+                onChange={(e) => setFilterYear(Number(e.target.value))}
+              />
+            </label>
+            <label className={styles.filterLabel}>
+              Status
+              <select
+                className={styles.filterInput}
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </label>
+            <button className={styles.filterBtn} type="submit">
+              Filter
+            </button>
+          </form>
 
           {loadingList && <p className={styles.info}>Loading…</p>}
           {listError && <p className={styles.error}>{listError}</p>}
@@ -164,6 +302,7 @@ export default function EmployeeDashboard() {
                     <th>Project</th>
                     <th>Hours</th>
                     <th>Status</th>
+                    <th>Approved By</th>
                     <th>Remarks</th>
                   </tr>
                 </thead>
@@ -181,6 +320,7 @@ export default function EmployeeDashboard() {
                           {ts.status}
                         </span>
                       </td>
+                      <td>{ts.approvedByName || '—'}</td>
                       <td>{ts.remarks || '—'}</td>
                     </tr>
                   ))}

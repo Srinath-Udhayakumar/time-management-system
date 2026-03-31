@@ -282,7 +282,234 @@
   background: #dc2626;
 }
 
-/* Messages */
+/* Tab Bar */
+.tabBar {
+  display: flex;
+  gap: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 32px;
+}
+
+.tabBtn {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tabBtn:hover {
+  color: #1a1a2e;
+}
+
+.tabBtnActive {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+/* Today Label */
+.todayLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 4px 12px;
+}
+
+/* Project row above week grid */
+.projectRow {
+  margin-bottom: 20px;
+}
+
+.projectRow .label {
+  max-width: 200px;
+}
+
+/* Weekly Grid */
+.weekGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dayCell {
+  flex: 1;
+  min-width: 120px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: box-shadow 0.2s;
+}
+
+.dayCell:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.dayCellDisabled {
+  opacity: 0.45;
+  background: #f3f4f6;
+}
+
+.dayCellSubmitted {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.dayName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dayDate {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.daySubmittedInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dayHours {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.dayCellDisabledText {
+  font-size: 20px;
+  color: #d1d5db;
+}
+
+.dayInputGroup {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+}
+
+.dayInput {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.dayInput:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.12);
+}
+
+.daySubmitBtn {
+  padding: 6px 10px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.daySubmitBtn:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.daySubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dayCellError {
+  font-size: 11px;
+  color: #dc2626;
+  margin: 0;
+  text-align: center;
+}
+
+.dayCellSuccess {
+  font-size: 11px;
+  color: #16a34a;
+  margin: 0;
+  text-align: center;
+}
+
+/* Filter Bar */
+.filterBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.filterLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.filterInput {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+  min-width: 110px;
+  transition: border-color 0.2s;
+}
+
+.filterInput:focus {
+  border-color: #6366f1;
+}
+
+.filterBtn {
+  padding: 8px 18px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: background 0.2s;
+}
+
+.filterBtn:hover {
+  background: #4f46e5;
+}
+
 .error {
   background: #fef2f2;
   color: #dc2626;
